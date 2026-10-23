@@ -1,0 +1,51 @@
+# ==========================================================
+# Librerías del proyecto trading_project
+# ==========================================================
+# Instalar con:
+#   pip install -r requirements.txt
+# ==========================================================
+
+# --- Conexión con Binance ---
+python-binance==1.0.22
+
+# --- Manipulación de datos ---
+pandas==2.2.3
+numpy==2.1.3
+
+# --- Variables de entorno (.env) ---
+python-dotenv==1.0.1
+
+# --- Peticiones HTTP (Telegram en fases posteriores) ---
+requests==2.32.3
+
+# --- Visualización (para notebooks y gráficos) ---
+matplotlib==3.9.2
+
+# --- Machine Learning (Fase 6) ---
+# IMPORTANTE (revisión jul-2026): el modelo de producción
+# (model_limit_btc.joblib) está entrenado con sklearn 1.5.2.
+# Esta versión NO puede cambiar sin reentrenar el modelo.
+# En el Mac de desarrollo usar TAMBIÉN 1.5.2 (el warning
+# InconsistentVersionWarning venía de entrenar con 1.7.2).
+scikit-learn==1.5.2
+
+# --- Persistencia de modelos (Fase 6-7) ---
+# joblib ya viene con scikit-learn, pero lo listamos
+# explícitamente para claridad.
+joblib==1.4.2
+
+# --- Datos externos: DXY desde Yahoo Finance (Fase 9) ---
+# yfinance no necesita clave de API y ofrece datos
+# históricos fiables de índices como DX-Y.NYB (DXY).
+# Nota: 0.2.51 dejó de funcionar (Yahoo empezó a bloquear las
+# peticiones sin un TLS fingerprint de navegador real).
+# 1.2.2 incorpora curl_cffi que resuelve ese bloqueo.
+yfinance==1.2.2
+
+# --- Dashboard (Fase 13) ---
+streamlit>=1.30.0
+plotly>=5.18.0
+streamlit-autorefresh>=1.0.1
+
+# --- Supabase (routing C1 / tracking web) ---
+supabase>=2.0.0

@@ -1,0 +1,38 @@
+# ==========================================================
+# Servicio systemd: Dashboard Streamlit (09_dashboard.py)
+# ==========================================================
+# Sirve el dashboard en el puerto 8501, accesible desde
+# cualquier navegador via http://IP_DEL_SERVIDOR:8501
+#
+# Instalar:
+#   sudo cp deploy/trading-dashboard.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable trading-dashboard
+#   sudo systemctl start trading-dashboard
+#
+# Ver logs:
+#   journalctl -u trading-dashboard -f
+# ==========================================================
+
+[Unit]
+Description=Trading Signal Dashboard (Streamlit)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=trading
+Group=trading
+WorkingDirectory=/home/trading/trading_project_signal
+ExecStart=/home/trading/trading_project_signal/.venv/bin/streamlit run src/09_dashboard.py --server.port 8501 --server.address 0.0.0.0 --server.headless true
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+
+# Limitar recursos
+MemoryMax=512M
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target

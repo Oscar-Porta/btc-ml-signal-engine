@@ -1,0 +1,40 @@
+# ==========================================================
+# Servicio systemd: Trading Signal (08_live_signal.py)
+# ==========================================================
+# Se ejecuta 24/7 en modo --loop.
+# Se reinicia automáticamente si falla.
+#
+# Instalar:
+#   sudo cp deploy/trading-signal.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable trading-signal
+#   sudo systemctl start trading-signal
+#
+# Ver logs:
+#   journalctl -u trading-signal -f
+# ==========================================================
+
+[Unit]
+Description=BTC Trading Signal Bot (live 24/7)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=trading
+Group=trading
+WorkingDirectory=/home/trading/trading_project_signal
+ExecStart=/home/trading/trading_project_signal/.venv/bin/python src/08_live_signal.py --loop
+Restart=always
+RestartSec=60
+StandardOutput=journal
+StandardError=journal
+
+# python-dotenv carga el .env automáticamente
+
+# Limitar recursos (protección)
+MemoryMax=512M
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target

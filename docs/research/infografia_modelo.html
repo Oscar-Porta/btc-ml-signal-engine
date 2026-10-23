@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BTC Signal Engine BTC — Cómo funciona el modelo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #070c18;
+    --bg2: #0d1425;
+    --bg3: #111b30;
+    --border: #1e2d4a;
+    --border-bright: #2a3f6a;
+    --cyan: #00d4ff;
+    --cyan-dim: #0099bb;
+    --blue: #3b82f6;
+    --blue-dim: #1d4ed8;
+    --green: #10b981;
+    --green-dim: #065f46;
+    --red: #ef4444;
+    --red-dim: #7f1d1d;
+    --yellow: #f59e0b;
+    --purple: #8b5cf6;
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+    --text-faint: #475569;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.6;
+    padding: 32px 24px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* ─── HEADER ─── */
+  .header {
+    text-align: center;
+    padding: 40px 0 32px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+  .header .tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--cyan);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  .header p {
+    color: var(--text-dim);
+    font-size: 14px;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* ─── SECTION TITLE ─── */
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-faint);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ─── PIPELINE ─── */
+  .pipeline {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 56px;
+  }
+
+  .pipe-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .pipe-step {
+    flex: 1;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    position: relative;
+    transition: border-color 0.2s;
+  }
+  .pipe-step:hover { border-color: var(--border-bright); }
+
+  .pipe-step .step-num {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-faint);
+    margin-bottom: 4px;
+  }
+  .pipe-step .step-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+  .pipe-step .step-script {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--cyan-dim);
+    margin-bottom: 6px;
+  }
+  .pipe-step .step-desc {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  .pipe-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-faint);
+    font-size: 16px;
+    padding: 0 8px;
+    flex-shrink: 0;
+  }
+
+  .accent-cyan { border-color: #00d4ff44 !important; }
+  .accent-blue { border-color: #3b82f644 !important; }
+  .accent-green { border-color: #10b98144 !important; }
+  .accent-purple { border-color: #8b5cf644 !important; }
+  .accent-yellow { border-color: #f59e0b44 !important; }
+
+  .dot-cyan { width: 6px; height: 6px; border-radius: 50%; background: var(--cyan); display: inline-block; margin-right: 6px; vertical-align: middle; }
+  .dot-blue { width: 6px; height: 6px; border-radius: 50%; background: var(--blue); display: inline-block; margin-right: 6px; vertical-align: middle; }
+  .dot-green { width: 6px; height: 6px; border-radius: 50%; background: var(--green); display: inline-block; margin-right: 6px; vertical-align: middle; }
+  .dot-purple { width: 6px; height: 6px; border-radius: 50%; background: var(--purple); display: inline-block; margin-right: 6px; vertical-align: middle; }
+  .dot-yellow { width: 6px; height: 6px; border-radius: 50%; background: var(--yellow); display: inline-block; margin-right: 6px; vertical-align: middle; }
+  .dot-red { width: 6px; height: 6px; border-radius: 50%; background: var(--red); display: inline-block; margin-right: 6px; vertical-align: middle; }
+
+  /* ─── CARDS GRID ─── */
+  .cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 56px;
+  }
+  .cards.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+  .cards.cols1 { grid-template-columns: 1fr; }
+
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .card h3 {
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card .body { font-size: 12.5px; color: var(--text-dim); line-height: 1.6; }
+  .card .mono { font-family: var(--mono); font-size: 11px; }
+
+  /* ─── CALLOUT ─── */
+  .callout {
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 20px;
+    border-left: 3px solid;
+  }
+  .callout.cyan { background: #00d4ff0a; border-color: var(--cyan); }
+  .callout.green { background: #10b9810a; border-color: var(--green); }
+  .callout.yellow { background: #f59e0b0a; border-color: var(--yellow); }
+  .callout.red { background: #ef44440a; border-color: var(--red); }
+  .callout.purple { background: #8b5cf60a; border-color: var(--purple); }
+  .callout h4 { font-size: 12px; font-weight: 600; margin-bottom: 8px; color: #fff; }
+  .callout p, .callout li { font-size: 12.5px; color: var(--text-dim); line-height: 1.6; }
+  .callout ul { padding-left: 16px; }
+
+  /* ─── TIMELINE SPLIT ─── */
+  .timeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .tl-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    text-align: center;
+  }
+  .tl-block .tl-label { font-size: 10px; color: var(--text-faint); font-family: var(--mono); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+  .tl-block .tl-value { font-size: 13px; font-weight: 600; }
+  .tl-divider { width: 1px; background: var(--border); align-self: stretch; }
+  .tl-arrow { padding: 0 8px; color: var(--text-faint); font-size: 14px; }
+
+  /* ─── FEATURE TABLE ─── */
+  .ftable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-top: 10px;
+  }
+  .ftable th {
+    text-align: left;
+    color: var(--text-faint);
+    font-weight: 500;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .ftable td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #111b3060;
+    color: var(--text-dim);
+    vertical-align: top;
+  }
+  .ftable td:first-child { font-family: var(--mono); font-size: 11px; color: var(--cyan-dim); }
+  .ftable tr:last-child td { border-bottom: none; }
+
+  /* ─── PROBABILITY VISUAL ─── */
+  .prob-demo {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .prob-demo h3 { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 16px; }
+
+  .trade-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin-bottom: 14px;
+  }
+  .trade-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+  }
+  .trade-dot.win { background: var(--green); opacity: 0.85; }
+  .trade-dot.lose { background: var(--red); opacity: 0.5; }
+
+  .calc-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 12.5px;
+  }
+  .calc-box {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    flex: 1;
+  }
+  .calc-box .label { color: var(--text-faint); font-size: 10px; margin-bottom: 2px; }
+  .calc-box .value { color: #fff; font-size: 13px; font-weight: 600; }
+  .calc-box .sub { color: var(--text-dim); font-size: 11px; }
+  .calc-result {
+    background: #10b98115;
+    border: 1px solid var(--green);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-family: var(--mono);
+    text-align: center;
+  }
+  .calc-result .label { color: var(--green); font-size: 10px; margin-bottom: 2px; }
+  .calc-result .value { color: var(--green); font-size: 16px; font-weight: 700; }
+
+  /* ─── LABEL COMPARISON ─── */
+  .label-compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .lc-trade {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .lc-trade .title { font-size: 11px; font-weight: 600; color: var(--text-dim); margin-bottom: 10px; font-family: var(--mono); }
+  .lc-trade .metric { font-size: 20px; font-weight: 700; margin-bottom: 10px; }
+  .lc-verdict {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 11px;
+  }
+  .lc-verdict .row { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; border-radius: 4px; }
+  .lc-verdict .pass { background: #10b98120; color: var(--green); }
+  .lc-verdict .fail { background: #ef444420; color: var(--red); }
+  .lc-verdict .label { color: var(--text-faint); }
+
+  /* ─── RULE CARDS ─── */
+  .rule-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 14px;
+  }
+  .rule-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .rule-badge {
+    background: var(--bg3);
+    border: 1px solid var(--border-bright);
+    border-radius: 5px;
+    padding: 3px 8px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--cyan);
+    letter-spacing: 1px;
+  }
+  .rule-name { font-size: 14px; font-weight: 600; color: #fff; }
+  .rule-why { font-size: 11px; color: var(--text-faint); font-style: italic; }
+  .conditions {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .cond {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-dim);
+    font-family: var(--mono);
+  }
+  .cond::before { content: '›'; color: var(--cyan-dim); }
+
+  /* ─── WALKFORWARD ─── */
+  .wf-row {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 6px;
+    align-items: center;
+  }
+  .wf-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-faint);
+    width: 50px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .wf-train {
+    background: var(--blue-dim);
+    border-radius: 4px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    color: #93c5fd;
+    font-family: var(--mono);
+  }
+  .wf-test {
+    background: #f59e0b40;
+    border: 1px solid var(--yellow);
+    border-radius: 4px;
+    height: 20px;
+    width: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    color: var(--yellow);
+    font-family: var(--mono);
+    flex-shrink: 0;
+  }
+
+  /* ─── PRODUCTION FLOW ─── */
+  .prod-flow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .prod-step {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    text-align: center;
+    flex: 1;
+    min-width: 100px;
+  }
+  .prod-step .icon { font-size: 18px; margin-bottom: 4px; }
+  .prod-step .name { font-weight: 600; color: #fff; font-size: 11px; margin-bottom: 2px; }
+  .prod-step .sub { color: var(--text-faint); font-size: 10px; }
+  .prod-arrow { color: var(--text-faint); font-size: 16px; flex-shrink: 0; }
+
+  /* ─── RETRAIN ─── */
+  .retrain-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    counter-reset: rt;
+  }
+  .rt-step {
+    display: flex;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .rt-step:last-child { border-bottom: none; }
+  .rt-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--bg3);
+    border: 1px solid var(--border-bright);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--cyan);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .rt-content .title { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .rt-content .desc { font-size: 12px; color: var(--text-dim); }
+  .rt-content .script { font-family: var(--mono); font-size: 10px; color: var(--cyan-dim); margin-top: 4px; }
+
+  /* ─── INLINE BADGE ─── */
+  .badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+  }
+  .badge-cyan { background: #00d4ff15; color: var(--cyan); border: 1px solid #00d4ff40; }
+  .badge-green { background: #10b98115; color: var(--green); border: 1px solid #10b98140; }
+  .badge-red { background: #ef444415; color: var(--red); border: 1px solid #ef444440; }
+  .badge-yellow { background: #f59e0b15; color: var(--yellow); border: 1px solid #f59e0b40; }
+  .badge-purple { background: #8b5cf615; color: var(--purple); border: 1px solid #8b5cf640; }
+
+  /* ─── SL/TP VISUAL ─── */
+  .sltp-visual {
+    position: relative;
+    height: 120px;
+    background: var(--bg3);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    margin-top: 12px;
+  }
+  .price-line {
+    position: absolute;
+    left: 0; right: 0;
+    height: 1px;
+  }
+  .price-label {
+    position: absolute;
+    right: 8px;
+    font-family: var(--mono);
+    font-size: 10px;
+    transform: translateY(-50%);
+  }
+  .price-zone {
+    position: absolute;
+    left: 0; right: 0;
+  }
+
+  /* ─── DIVIDER ─── */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 40px 0 36px;
+  }
+
+  .section-block { margin-bottom: 48px; }
+
+  .highlight { color: #fff; font-weight: 600; }
+  .code { font-family: var(--mono); font-size: 11px; color: var(--cyan-dim); }
+
+  /* two-col text */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  .note {
+    font-size: 11px;
+    color: var(--text-faint);
+    font-style: italic;
+    margin-top: 8px;
+  }
+
+  /* scroll bar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════ HEADER ════════════════════════ -->
+<div class="header">
+  <div class="tag">BTC Signal Engine · BTC/USDT · v3</div>
+  <h1>Cómo funciona el modelo predictivo</h1>
+  <p>Flujo completo: desde los datos históricos hasta la señal en vivo. Referencia técnica del proyecto.</p>
+</div>
+
+<!-- ════════════════════════ PIPELINE OVERVIEW ════════════════════════ -->
+<div class="section-block">
+  <div class="section-label">00 — Visión general del pipeline</div>
+
+  <div class="pipeline">
+    <div class="pipe-row">
+      <div class="pipe-step accent-cyan">
+        <div class="step-num">PASO 1</div>
+        <div class="step-name">📥 Descarga de datos</div>
+        <div class="step-script">01_download_data.py</div>
+        <div class="step-desc">5 años de velas 1h y 4h de Binance. Base de todo el proyecto.</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step accent-cyan">
+        <div class="step-num">PASO 2</div>
+        <div class="step-name">📐 Indicadores técnicos</div>
+        <div class="step-script">02_indicators.py</div>
+        <div class="step-desc">EMA 20/50, RSI 14, ATR 14, Swing High/Low sobre cada vela.</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step accent-cyan">
+        <div class="step-num">PASO 3</div>
+        <div class="step-name">🎯 Reglas de entrada</div>
+        <div class="step-script">03_rules.py</div>
+        <div class="step-desc">Detecta señales con 2 reglas de price action. Calcula SL y TP.</div>
+      </div>
+    </div>
+    <div style="display:flex; justify-content:center; color: var(--text-faint); padding: 2px 0;">↓</div>
+    <div class="pipe-row">
+      <div class="pipe-step accent-blue">
+        <div class="step-num">PASO 4</div>
+        <div class="step-name">🔁 Backtest</div>
+        <div class="step-script">04_backtest.py</div>
+        <div class="step-desc">Simula cada señal sobre velas reales. Registra resultado de cada trade.</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step accent-blue">
+        <div class="step-num">PASO 5</div>
+        <div class="step-name">🗃️ Preparar dataset ML</div>
+        <div class="step-script">06_prepare_dataset.py</div>
+        <div class="step-desc">Une señales + resultados. Construye 20 features + label. <strong style="color:#fff">Aquí ocurre el split 4+1.</strong></div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step accent-green">
+        <div class="step-num">PASO 6</div>
+        <div class="step-name">🧠 Entrenar modelo XGB</div>
+        <div class="step-script">07_train_model_v3.py</div>
+        <div class="step-desc">XGBoost aprende qué condiciones predicen un trade ganador. Walk-forward valida.</div>
+      </div>
+    </div>
+    <div style="display:flex; justify-content:center; color: var(--text-faint); padding: 2px 0;">↓</div>
+    <div class="pipe-row">
+      <div class="pipe-step accent-purple" style="flex: 0.6;">
+        <div class="step-num">PASO 7</div>
+        <div class="step-name">⚡ Señal en vivo</div>
+        <div class="step-script">08_live_signal.py</div>
+        <div class="step-desc">Cada hora: reglas detectan → modelo evalúa → Telegram.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout yellow">
+    <h4>⚡ Punto clave: los 5 años no se usan igual en todos los pasos</h4>
+    <p>Los <strong style="color:#fff">5 años completos</strong> se usan en los pasos 1-4 para generar el mayor número posible de trades simulados. El <strong style="color:#fff">split train/test (4+1)</strong> ocurre solo en el Paso 5, al construir el dataset para el modelo. El corte es <span class="code">31/12/2024</span>: todo lo anterior = entrenamiento, lo posterior = test.</p>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ════════════════════════ INDICADORES ════════════════════════ -->
+<div class="section-block">
+  <div class="section-label">01 — Indicadores técnicos · 02_indicators.py</div>
+
+  <div class="cards cols3">
+    <div class="card">
+      <h3><span class="dot-cyan"></span>EMA 20 y EMA 50</h3>
+      <div class="body">
+        Media exponencial de las últimas 20 y 50 velas.<br><br>
+        <span class="highlight">Tendencia:</span> si EMA20 > EMA50 → mercado alcista (<span class="badge badge-green">up</span>). Si no → bajista (<span class="badge badge-red">down</span>).<br><br>
+        Se calcula en <strong style="color:#fff">ambos timeframes</strong>: 1h para la entrada y 4h para el contexto macro.
+      </div>
+    </div>
+    <div class="card">
+      <h3><span class="dot-blue"></span>RSI 14 · ATR 14</h3>
+      <div class="body">
+        <span class="highlight">RSI:</span> mide si el mercado está sobrecomprado (>70) o sobrevendido (<30). Usado para confirmar que la señal no entra en agotamiento.<br><br>
+        <span class="highlight">ATR:</span> volatilidad promedio de las últimas 14 velas. Pieza central del cálculo de SL y TP — se adapta automáticamente a la volatilidad del momento.
+      </div>
+    </div>
+    <div class="card">
+      <h3><span class="dot-purple"></span>Swing High / Swing Low</h3>
+      <div class="body">
+        Máximo más alto y mínimo más bajo de las últimas 20 velas. Define la <span class="highlight">estructura del mercado</span>: los niveles que si se rompen indican una continuación de tendencia.<br><br>
+        Necesario para la Regla 2 (breakout).
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ════════════════════════ REGLAS ════════════════════════ -->
+<div class="section-block">
+  <div class="section-label">02 — Reglas de entrada · 03_rules.py</div>
+
+  <div class="callout cyan">
+    <h4>Filtro de confluencia de timeframes — siempre activo</h4>
+    <p>Las reglas solo generan señal <strong style="color:#fff">LONG si la tendencia 4h es alcista</strong> y solo <strong style="color:#fff">SHORT si la tendencia 4h es bajista</strong>. Este filtro elimina el ruido de movimientos contrarios a la tendencia principal antes de evaluar cualquier regla.</p>
+  </div>
+
+  <div class="rule-card">
+    <div class="rule-header">
+      <span class="rule-badge">REGLA 1</span>
+      <span class="rule-name">Pullback a EMA 20</span>
+      <span class="rule-why">— "El precio retrocede hasta un soporte dinámico y rebota"</span>
+    </div>
+    <div class="two-col">
+      <div>
+        <div style="font-size:11px; color:var(--text-faint); margin-bottom:8px;">CONDICIONES LONG</div>
+        <div class="conditions">
+          <div class="cond">trend_4h = up &amp; trend_1h = up</div>
+          <div class="cond">low &lt;= ema_20 (tocó la EMA por abajo)</div>
+          <div class="cond">close &gt; ema_20 (cerró por encima → rebote)</div>
+          <div class="cond">rsi_14 &lt; 55 (viene de retroceder)</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px; color:var(--text-faint); margin-bottom:8px;">POR QUÉ ESTA REGLA</div>
+        <div style="font-size:12px; color:var(--text-dim);">En tendencia alcista, el precio sube en impulsos y retrocede a la EMA. Si el retroceso no rompe la EMA y la vela cierra por encima, es señal de que el impulso continúa. El RSI confirma que el retroceso fue real, no que el mercado está sobrecomprado.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rule-card">
+    <div class="rule-header">
+      <span class="rule-badge">REGLA 2</span>
+      <span class="rule-name">Breakout de estructura</span>
+      <span class="rule-why">— "El precio rompe el máximo reciente con cierre confirmado"</span>
+    </div>
+    <div class="two-col">
+      <div>
+        <div style="font-size:11px; color:var(--text-faint); margin-bottom:8px;">CONDICIONES LONG</div>
+        <div class="conditions">
+          <div class="cond">trend_4h = up</div>
+          <div class="cond">close &gt; swing_high_20 de la vela anterior</div>
+          <div class="cond">rsi_14 entre 40 y 75</div>
+        </div>
+        <div style="margin-top:10px; font-size:11px; color:var(--text-faint);">
+          Se usa <span class="code">.shift(1)</span> para comparar con la vela anterior. Evita anticiparse a un breakout que aún no se ha confirmado.
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px; color:var(--text-faint); margin-bottom:8px;">POR QUÉ ESTA REGLA</div>
+        <div style="font-size:12px; color:var(--text-dim);">Cuando el precio rompe un máximo relevante con la vela cerrada (no solo con un wick) y el RSI indica momentum sin agotamiento, hay alta probabilidad de continuación. El swing_high de 20 periodos filtra solo los niveles estructuralmente importantes.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SL / TP -->
+  <div class="card" style="margin-top:14px;">
+    <h3>⚖️ Gestión de riesgo — Stop Loss y Take Profit</h3>
+    <div class="two-col" style="margin-top:8px;">
+      <div>
+        <div class="body">
+          <p style="margin-bottom:10px;">Los niveles no son fijos en precio. Se calculan sobre el <span class="highlight">ATR</span> en el momento de cada señal, adaptándose a la volatilidad real del mercado.</p>
+          <div style="font-family:var(--mono); font-size:12px; background:var(--bg3); border-radius:6px; padding:12px; line-height:1.8;">
+            <span style="color:var(--text-faint)">// LONG</span><br>
+            <span style="color:var(--red)">SL</span>  = entry − (ATR × <span style="color:#fff">1.25</span>)<br>
+            <span style="color:var(--green)">TP1</span> = entry + (riesgo × <span style="color:#fff">2.0</span>)<br>
+            <span style="color:var(--text-faint); font-size:10px; margin-top:4px; display:block;">Riesgo = distancia entry → SL = 1R</span>
+          </div>
+          <div class="note" style="margin-top:10px;">Config A · Cierre 100% en TP1, sin segunda fase. Elegida tras el barrido del Anexo II (<span class="code">tp_sl_optimizer.py</span>)</div>
+        </div>
+      </div>
+      <div>
+        <!-- SVG SL/TP diagram -->
+        <svg viewBox="0 0 220 140" style="width:100%; max-width:260px; display:block; margin: 0 auto;">
+          <!-- bg -->
+          <rect width="220" height="140" fill="#111b30" rx="6"/>
+          <!-- TP zone -->
+          <rect x="0" y="0" width="220" height="45" fill="#10b98108"/>
+          <!-- SL zone -->
+          <rect x="0" y="95" width="220" height="45" fill="#ef444408"/>
+          <!-- Entry line -->
+          <line x1="0" y1="70" x2="220" y2="70" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
+          <!-- TP1 line -->
+          <line x1="0" y1="28" x2="220" y2="28" stroke="#10b981" stroke-width="1.5"/>
+          <!-- SL line -->
+          <line x1="0" y1="112" x2="220" y2="112" stroke="#ef4444" stroke-width="1.5"/>
+          <!-- Labels -->
+          <text x="8" y="24" fill="#10b981" font-family="monospace" font-size="10">TP1 = +2R</text>
+          <text x="8" y="66" fill="#94a3b8" font-family="monospace" font-size="10">ENTRY (close)</text>
+          <text x="8" y="108" fill="#ef4444" font-family="monospace" font-size="10">SL = -1.25×ATR</text>
+          <!-- Arrow up -->
+          <line x1="195" y1="68" x2="195" y2="30" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrowG)"/>
+          <!-- Arrow down -->
+          <line x1="195" y1="72" x2="195" y2="110" stroke="#ef4444" stroke-width="1.5" marker-end="url(#arrowR)"/>
+          <!-- R labels -->
+          <text x="200" y="52" fill="#10b98180" font-family="monospace" font-size="9">+2R</text>
+          <text x="200" y="94" fill="#ef444480" font-family="monospace" font-size="9">-1R</text>
+          <defs>
+            <marker id="arrowG" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 Z" fill="#10b981"/>
+            </marker>
+            <marker id="arrowR" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 Z" fill="#ef4444"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ════════════════════════ BACKTEST ════════════════════════ -->
+<div class="section-block">
+  <div class="section-label">03 — Backtest · 04_backtest.py · Corre sobre los 5 años completos</div>
+
+  <div class="callout cyan">
+    <h4>¿Qué es el backtest?</h4>
+    <p>Es una <strong style="color:#fff">simulación mecánica</strong> — no hay modelo ni predicción. Para cada señal detectada, el script recorre las velas posteriores una a una y comprueba si el precio toca el SL o el TP. No sabe nada del futuro: va vela a vela igual que lo haría en tiempo real.</p>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <h3>⚙️ Mecánica de simulación</h3>
+      <div class="body">
+        <p style="margin-bottom:8px;">Por cada señal en <span class="code">signals.csv</span>:</p>
+        <ol style="padding-left:16px; font-size:12px; color:var(--text-dim); line-height:2;">
+          <li>Toma la vela siguiente al disparo de la señal</li>
+          <li>Comprueba si el <code style="color:var(--red); font-size:11px;">low</code> tocó el SL</li>
+          <li>Comprueba si el <code style="color:var(--green); font-size:11px;">high</code> tocó el TP1</li>
+          <li>Repite con la siguiente vela hasta resolución</li>
+          <li>Límite: 24 velas (24h). Si no se resuelve → cierre al precio actual (<span class="badge badge-yellow">time_exit</span>)</li>
+        </ol>
+      </div>
+    </div>
+    <div class="card">
+      <h3>📦 Output: trades.csv</h3>
+      <div class="body">
+        <p style="margin-bottom:10px;">Cada trade resuelto genera una fila con:</p>
+        <table class="ftable">
+          <thead><tr><th>Campo</th><th>Significado</th></tr></thead>
+          <tbody>
+            <tr><td>close_reason</td><td>stop_loss / take_profit_1 / time_exit</td></tr>
+            <tr><td>pnl_abs</td><td>Ganancia o pérdida en USD</td></tr>
+            <tr><td>r_multiple</td><td>PnL expresado en unidades de riesgo (1R = riesgo inicial)</td></tr>
+            <tr><td>mae_r</td><td>Máxima excursión adversa — cuánto fue en contra antes de resolverse</td></tr>
+            <tr><td>bars_in_trade</td><td>Duración en velas de 1h</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout red">
+    <h4>⚠️ Limitación conocida: misma vela toca SL y TP</h4>
+    <p>Si en una vela de 1h el precio baja hasta el SL y también sube hasta el TP (algo que ocurre en velas de alta volatilidad), el backtest no puede saber cuál se tocó primero. Se asume el <strong style="color:#fff">peor caso: SL</strong>. Es una simplificación conservadora inherente a trabajar con velas de 1h. En producción live, el monitor de posiciones comprueba el precio con mayor frecuencia y detecta el orden real.</p>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ════════════════════════ DATASET ════════════════════════ -->
+<div class="section-block">
+  <div class="section-label">04 — Preparar dataset ML · 06_prepare_dataset.py · Aquí ocurre el split</div>
+
+  <div class="callout cyan">
+    <h4>El puente entre el backtest y el modelo</h4>
+    <p>Aquí unimos dos cosas: <strong style="color:#fff">lo que sabíamos ANTES de la señal</strong> (las 20 features del contexto del mercado) con <strong style="color:#fff">lo que pasó DESPUÉS</strong> (el resultado del backtest). El modelo aprende la relación entre ambas.</p>
+  </div>
+
+  <!-- Split timeline -->
+  <div style="margin-bottom: 20px;">
+    <div style="font-size:11px; color:var(--text-faint); margin-bottom:8px; font-family:var(--mono);">SPLIT TEMPORAL DEL DATASET DE TRADES</div>
+    <div style="display:flex; height:40px; border-radius:8px; overflow:hidden; border:1px solid var(--border);">
+      <div style="flex:4; background:var(--blue-dim); display:flex; align-items:center; justify-content:center; gap:8px;">
+        <span style="font-size:11px; color:#93c5fd; font-family:var(--mono);">TRAIN — ~4 años (2020 → 2024)</span>
+      </div>
+      <div style="width:2px; background: var(--border-bright);"></div>
+      <div style="flex:1; background:#f59e0b20; border-right:none; display:flex; align-items:center; justify-content:center; gap:8px;">
+        <span style="font-size:11px; color:var(--yellow); font-family:var(--mono);">TEST — 2025</span>
+      </div>
+    </div>
+    <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-faint); font-family:var(--mono); margin-top:4px; padding:0 2px;">
+      <span>El modelo aprende aquí</span>
+      <span style="color:var(--yellow);">Corte: 31/12/2024</span>
+      <span>Nunca visto durante el entrenamiento</span>
+    </div>
+  </div>
+
+  <!-- Features -->
+  <div class="cards">
+    <div class="card">
+      <h3>📊 Las 20 features — capturadas al momento de la señal</h3>
+      <div class="body" style="font-size:11.5px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px 16px; margin-top:6px;">
+          <div style="color:var(--text-faint); font-size:10px; padding-bottom:4px; border-bottom:1px solid var(--border); margin-bottom:4px;">INDICADORES</div>
+          <div style="color:var(--text-faint); font-size:10px; padding-bottom:4px; border-bottom:1px solid var(--border); margin-bottom:4px;">CONTEXTO DE MERCADO</div>
+          <div class="code" style="line-height:1.9;">rsi_14<br>atr_14<br>dist_ema20_pct<br>dist_ema50_pct<br>ema_spread_pct<br>ema_spread_4h_pct<br>atr_pct · price_position</div>
+          <div class="code" style="line-height:1.9;">volume_sma20_ratio<br>rsi_14_4h · atr_pct_4h<br>roc_5 · roc_20<br>atr_regime<br>candle_range_ratio<br>body_pct · upper_wick_pct<br>lower_wick_pct</div>
+          <div style="color:var(--text-faint); font-size:10px; padding-bottom:4px; border-bottom:1px solid var(--border); margin-bottom:4px; margin-top:8px; grid-column:span 2;">CONTEXTO DEL TRADE</div>
+          <div class="code" style="grid-column:span 2; line-height:1.9;">hour · day_of_week · direction_num · rule_num · reward_risk_ratio</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>🏷️ El label — R-multiple ≥ 0.5</h3>
+      <div class="body">
+        <p style="margin-bottom:12px;">A cada trade se le asigna un <span class="badge badge-green">1</span> o <span class="badge badge-red">0</span> según si fue "suficientemente ganador".</p>
+
+        <div class="label-compare">
+          <div class="lc-trade">
+            <div class="title">Trade A</div>
+            <div class="metric" style="color:var(--green)">+1.8R</div>
+            <div class="lc-verdict">
+              <div class="row pass"><span class="label">PnL &gt; 0</span><span>✓ 1</span></div>
+              <div class="row pass"><span class="label">R ≥ 0.5</span><span>✓ 1</span></div>
+            </div>
+          </div>
+          <div class="lc-trade" style="border-color:#f59e0b40;">
+            <div class="title">Trade B · time_exit</div>
+            <div class="metric" style="color:var(--yellow)">+0.1R</div>
+            <div class="lc-verdict">
+              <div class="row pass"><span class="label">PnL &gt; 0</span><span style="color:var(--yellow)">⚠ 1</span></div>
+              <div class="row fail"><span class="label">R ≥ 0.5</span><span>✗ 0</span></div>
+            </div>
+          </div>
+          <div class="lc-trade">
+            <div class="title">Trade C</div>
+            <div class="metric" style="color:var(--red)">-0.9R</div>
+            <div class="lc-verdict">
+              <div class="row fail"><span class="label">PnL &gt; 0</span><span>✗ 0</span></div>
+              <div class="row fail"><span class="label">R ≥ 0.5</span><span>✗ 0</span></div>
+            </div>
+          </div>
+        </div>
+
+        <p style="margin-top:12px; font-size:12px; color:var(--text-dim);">El Trade B es el problema: ganó centavos en 24h. Con <span class="code">pnl&gt;0</span> el modelo lo aprendería como ganador junto al Trade A, aunque no tienen nada en común. <span class="highlight">R≥0.5 lo filtra</span>, dejando solo los trades que ganaron de forma clara.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ════════════════════════ MODELO ════════════════════════ -->
+<div class="section-block">
+  <div class="section-label">05 — Modelo XGBoost · 07_train_model_v3.py + 07_walk_forward.py</div>
+
+  <div class="cards">
+    <div class="card">
+      <h3>🧠 Qué es XGBoost y cómo aprende</h3>
+      <div class="body">
+        <p style="margin-bottom:10px;">Es un clasificador que construye <span class="highlight">200 árboles de decisión en cadena</span>. Cada árbol corrige los errores del anterior. El resultado es un modelo que combina muchas reglas simples ("si RSI entre 45-55 <em>y</em> ATR bajo <em>y</em> hora 10-16h…") en una predicción robusta.</p>
+        <table class="ftable" style="margin-top:8px;">
+          <thead><tr><th>Parámetro</th><th>Valor</th><th>Por qué</th></tr></thead>
+          <tbody>
+            <tr><td>n_estimators</td><td>200</td><td>200 árboles encadenados</td></tr>
+            <tr><td>max_depth</td><td>4</td><td>Cada árbol: máx 4 divisiones (evita overfitting)</td></tr>
+            <tr><td>learning_rate</td><td>0.05</td><td>Corrección lenta y estable</td></tr>
+            <tr><td>min_samples_leaf</td><td>20</td><td>Mínimo 20 trades por hoja</td></tr>
+            <tr><td>subsample</td><td>0.8</td><td>Cada árbol ve el 80% de los datos</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <h3>✅ Walk-Forward Validation · 07_walk_forward.py</h3>
+      <div class="body">
+        <p style="margin-bottom:12px;">Un único split train/test podría ser casualidad. El walk-forward prueba el modelo en <span class="highlight">7 ventanas temporales</span> consecutivas para confirmar que aprende patrones reales, no memoriza datos.</p>
+        <div style="margin-top:4px;">
+          <div class="wf-row">
+            <div class="wf-label">Fold 1</div>
+            <div class="wf-train" style="flex:1.2;">Train → 2022</div>
+            <div style="width:4px;"></div>
+            <div class="wf-test">Test H1 2023</div>
+          </div>
+          <div class="wf-row">
+            <div class="wf-label">Fold 2</div>
+            <div class="wf-train" style="flex:1.6;">Train → Jun 2023</div>
+            <div style="width:4px;"></div>
+            <div class="wf-test">Test H2 2023</div>
+          </div>
+          <div class="wf-row">
+            <div class="wf-label">Fold 3</div>
+            <div class="wf-train" style="flex:2.0;">Train → 2023</div>
+            <div style="width:4px;"></div>
+            <div class="wf-test">Test H1 2024</div>
+          </div>
+          <div class="wf-row">
+            <div class="wf-label">Fold 4</div>
+            <div class="wf-train" style="flex:2.5;">Train → Jun 2024</div>
+            <div style="width:4px;"></div>
+            <div class="wf-test">Test H2 2024</div>
+          </div>
+          <div class="wf-row">
+            <div class="wf-label">Fold 5-7</div>
+            <div class="wf-train" style="flex:3.0; background:#1d4ed880;">Train → 2025</div>
+            <div style="width:4px;"></div>
+            <div class="wf-test">Test 2026</div>
+          </div>
+        </div>
+        <p class="note">Si el rendimiento es consistente en todos los folds → no hay overfitting.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROBABILITY VISUAL - THE KEY CONCEPT -->
+  <div class="prob-demo">
+    <h3>💡 Por qué una probabilidad baja no significa que el sistema pierda</h3>
+    <p style="font-size:12.5px; color:var(--text-dim); margin-bottom:20px;">El modelo devuelve una probabilidad entre 0 y 1. Lo que hace rentable el sistema no es solo cuántas veces gana, sino <strong style="color:#fff">cuánto gana cuando gana vs cuánto pierde cuando pierde</strong> — la asimetría del TP/SL (2R vs 1R).</p>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
+      <!-- Scenario -->
+      <div>
+        <div style="font-size:11px; color:var(--text-faint); font-family:var(--mono); margin-bottom:10px;">EJEMPLO: 100 TRADES CON PROBABILIDAD ~40%</div>
+        <div class="trade-grid">
+          <!-- 40 green winners -->
+          <div class="trade-dot win"></div><div class="trade-dot win"></div><div class="trade-dot win"></div><div class="trade-dot win"></div><div class="trade-dot win"></div>
+          <div class="trade-dot win"></div><div class="trade-dot win"></div><div class="trade-dot win"></div><div class="trade-dot win"></div><div class="trade-dot win"></div>
+          <div class="trade-dot win"></div><div class="trade-dot win"></div><div class="trade-dot win"></div><div class="trade-dot win"></div><div class="trade-dot win"></div>
+          <div class="trade-dot win"></div><div class="trade-dot win"></div><div class="trade-dot win"></div><div class="trade-dot win"></div><div class="trade-dot win"></div>
+          <div class="trade-dot win"></div><div class="trade-dot win"></div><div class="trade-dot win"></div><div class="trade-dot win"></div><div class="trade-dot win"></div>
+          <div class="trade-dot win"></div><div class="trade-dot win"></div><div class="trade-dot win"></div><div class="trade-dot win"></div><div class="trade-dot win"></div>
+          <div class="trade-dot win"></div><div class="trade-dot win"></div><div class="trade-dot win"></div><div class="trade-dot win"></div><div class="trade-dot win"></div>
+          <div class="trade-dot win"></div><div class="trade-dot win"></div><div class="trade-dot win"></div><div class="trade-dot win"></div><div class="trade-dot win"></div>
+          <!-- 60 red losers -->
+          <div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div>
+          <div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div>
+          <div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div>
+          <div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div>
+          <div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div>
+          <div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div>
+          <div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div>
+          <div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div>
+          <div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div>
+          <div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div>
+          <div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div>
+          <div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div>
+          <div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div><div class="trade-dot lose"></div>
+        </div>
+        <div style="display:flex; gap:12px; margin-top:8px; font-size:11px;">
+          <span><span style="display:inline-block;width:10px;height:10px;background:var(--green);border-radius:2px;vertical-align:middle;margin-right:4px;"></span>40 ganadores</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:var(--red);opacity:0.5;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>60 perdedores</span>
+        </div>
+      </div>
+
+      <!-- Math -->
+      <div>
+        <div style="font-size:11px; color:var(--text-faint); font-family:var(--mono); margin-bottom:10px;">CÁLCULO CON SL=1R · TP=2R</div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <div class="calc-box">
+            <div class="label">GANADORES</div>
+            <div class="value" style="color:var(--green);">40 × +2R = +80R</div>
+            <div class="sub">cada ganador aporta 2 unidades de riesgo</div>
+          </div>
+          <div class="calc-box">
+            <div class="label">PERDEDORES</div>
+            <div class="value" style="color:var(--red);">60 × −1R = −60R</div>
+            <div class="sub">cada perdedor cuesta 1 unidad de riesgo</div>
+          </div>
+          <div class="calc-result">
+            <div class="label">RESULTADO NETO</div>
+            <div class="value">+80R − 60R = +20R ✓</div>
+          </div>
+        </div>
+        <p style="margin-top:10px; font-size:11.5px; color:var(--text-dim);">La asimetría 2:1 del TP/SL permite ser rentable con una tasa de acierto del 40%. Sin esta asimetría, necesitarías >50% para ganar dinero. El umbral no necesita ser 0.50 para ser útil.</p>
+      </div>
+    </div>
+
+    <div class="callout green" style="margin-top:16px; margin-bottom:0;">
+      <h4>¿Qué significa exactamente la probabilidad del modelo?</h4>
+      <p>"En situaciones de mercado similares a esta (mismas condiciones de indicadores, hora, volatilidad…), históricamente los trades resultaron ganadores (R≥0.5) aproximadamente un X% de las veces." No predice el futuro con certeza — aprende patrones estadísticos de 4 años de datos.</p>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ════════════════════════ PRODUCCIÓN ════════════════════════ -->
+<div class="section-block">
+  <div class="section-label">06 — Señal en vivo · 08_live_signal.py · Cada hora, 24/7</div>
+
+  <div class="prod-flow">
+    <div class="prod-step">
+      <div class="icon">📡</div>
+      <div class="name">Descarga vela</div>
+      <div class="sub">Binance API · última 1h cerrada</div>
+    </div>
+    <div class="prod-arrow">→</div>
+    <div class="prod-step">
+      <div class="icon">📐</div>
+      <div class="name">Calcula indicadores</div>
+      <div class="sub">EMA, RSI, ATR, Swing</div>
+    </div>
+    <div class="prod-arrow">→</div>
+    <div class="prod-step">
+      <div class="icon">🎯</div>
+      <div class="name">Aplica reglas</div>
+      <div class="sub">Pullback o Breakout + filtro 4h</div>
+    </div>
+    <div class="prod-arrow">→</div>
+    <div class="prod-step" style="border-color:#3b82f644;">
+      <div class="icon">🧠</div>
+      <div class="name">Modelo evalúa</div>
+      <div class="sub">20 features → probabilidad 0-1</div>
+    </div>
+    <div class="prod-arrow">→</div>
+    <div class="prod-step" style="border-color:#8b5cf644;">
+      <div class="icon">📲</div>
+      <div class="name">Telegram</div>
+      <div class="sub">Señal + SL/TP + % confianza</div>
+    </div>
+  </div>
+
+  <div class="callout yellow">
+    <h4>⚡ Estado actual del umbral: informativo, no filtra</h4>
+    <p>El código define <span class="code">AI_THRESHOLD = 0.55</span> pero el comentario en el script es explícito: <em>"Solo se muestra en el mensaje, NO filtra señales. El operador decide si operar o no."</em><br><br>
+    Hoy recibes <strong style="color:#fff">todas las señales que detectan las reglas</strong>, junto con el porcentaje de confianza del modelo como dato informativo. Activar el filtro (no enviar señales por debajo de un umbral) sería el siguiente paso de optimización.</p>
+  </div>
+
+  <div class="callout purple">
+    <h4>La distinción clave del flujo</h4>
+    <p><strong style="color:#fff">Las reglas básicas filtran el tipo de patrón</strong> (solo entradas que cumplen las condiciones de pullback o breakout con confluencia de 4h). <strong style="color:#fff">El modelo filtra la calidad del contexto</strong> (qué probabilidad tiene ese patrón de funcionar dado el estado actual del mercado). Son dos filtros independientes y consecutivos.</p>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ════════════════════════ REENTRENAMIENTO ════════════════════════ -->
+<div class="section-block">
+  <div class="section-label">07 — Reentrenamiento periódico · Cada ~6 meses</div>
+
+  <div class="callout cyan">
+    <h4>¿Por qué reentrenar?</h4>
+    <p>El mercado de BTC cambia de régimen: bull market, bear market, mercados laterales. Un modelo entrenado solo en un tipo de mercado pierde precisión cuando el contexto cambia. Añadir datos nuevos amplía la diversidad de situaciones aprendidas y corrige posibles derivas.</p>
+  </div>
+
+  <div class="retrain-steps">
+    <div class="rt-step">
+      <div class="rt-num">1</div>
+      <div class="rt-content">
+        <div class="title">Descargar histórico actualizado</div>
+        <div class="desc">Los 5 años originales + los 6 meses nuevos de datos live. Mismo proceso de descarga e indicadores.</div>
+        <div class="script">01_download_data.py → 02_indicators.py</div>
+      </div>
+    </div>
+    <div class="rt-step">
+      <div class="rt-num">2</div>
+      <div class="rt-content">
+        <div class="title">Regenerar señales y backtest completo</div>
+        <div class="desc">Las reglas de entrada no cambian. El backtest corre sobre el histórico ampliado generando nuevos trades simulados.</div>
+        <div class="script">03_rules.py → 04_backtest.py</div>
+      </div>
+    </div>
+    <div class="rt-step">
+      <div class="rt-num">3</div>
+      <div class="rt-content">
+        <div class="title">Preparar nuevo dataset con mismas 20 features</div>
+        <div class="desc">El periodo de train se amplía. El periodo de test siempre es los últimos ~12 meses para comparación justa.</div>
+        <div class="script">06_prepare_dataset.py</div>
+      </div>
+    </div>
+    <div class="rt-step">
+      <div class="rt-num">4</div>
+      <div class="rt-content">
+        <div class="title">Reentrenar y validar walk-forward</div>
+        <div class="desc">Mismo algoritmo XGBoost, mismos hiperparámetros. Walk-forward confirma que no hay overfitting en el nuevo modelo.</div>
+        <div class="script">07_train_model_v3.py → 07_walk_forward.py</div>
+      </div>
+    </div>
+    <div class="rt-step">
+      <div class="rt-num">5</div>
+      <div class="rt-content">
+        <div class="title">Comparar vs modelo en producción y desplegar si mejora</div>
+        <div class="desc">Se evalúan ambos modelos sobre el mismo test set. Si el nuevo modelo genera mejor PnL y R-medio en el test, se despliega reemplazando el <span class="code">model.joblib</span> en producción.</div>
+        <div class="script">07_train_model_v3.py (comparativa directa) → deploy en VPS</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div style="text-align:center; padding: 32px 0 16px; border-top:1px solid var(--border); margin-top:40px;">
+  <div style="font-family:var(--mono); font-size:10px; color:var(--text-faint); letter-spacing:2px;">
+    BTC Signal Engine · BTC/USDT · Modelo v3 · XGBoost · R≥0.5 · 20 features · Walk-forward validated
+  </div>
+  <div style="font-family:var(--mono); font-size:10px; color:#1e2d4a; margin-top:4px;">
+    Generado: 2026-05-08 · 
+  </div>
+</div>
+
+</body>
+</html>

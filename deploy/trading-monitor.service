@@ -1,0 +1,39 @@
+# ==========================================================
+# Servicio systemd: Position Monitor (10_position_monitor.py)
+# ==========================================================
+# Monitorea posiciones abiertas cada 60 segundos.
+# Detecta SL, TP1, TP2 y time exit.
+# Se reinicia automáticamente si falla.
+#
+# Instalar:
+#   sudo cp deploy/trading-monitor.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable trading-monitor
+#   sudo systemctl start trading-monitor
+#
+# Ver logs:
+#   journalctl -u trading-monitor -f
+# ==========================================================
+
+[Unit]
+Description=BTC Position Monitor (SL/TP tracking)
+After=network-online.target trading-signal.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=trading
+Group=trading
+WorkingDirectory=/home/trading/trading_project_signal
+ExecStart=/home/trading/trading_project_signal/.venv/bin/python src/10_position_monitor.py
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+
+# Limitar recursos (protección)
+MemoryMax=256M
+CPUQuota=25%
+
+[Install]
+WantedBy=multi-user.target

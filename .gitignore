@@ -1,0 +1,33 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Secrets — never commit real credentials
+.env
+.env.*
+!.env.example
+
+# Market data (downloaded with src/01_download_data.py)
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Generated artifacts (datasets, models, results, logs) — reproducible from the pipeline
+outputs/*
+!outputs/.gitkeep
+*.joblib
+*.log
+
+# Python cache
+__pycache__/
+*.pyc
+*.egg-info/
+.ipynb_checkpoints/
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
